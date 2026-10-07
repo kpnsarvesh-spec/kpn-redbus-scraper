@@ -1,0 +1,25 @@
+name: RedBus Ratings Scraper
+
+on:
+  schedule:
+    # Every 6 hours (00:15, 06:15, 12:15, 18:15 UTC)
+    - cron: '15 */6 * * *'
+  workflow_dispatch:  # allow manual trigger from GitHub UI
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Run scraper
+        env:
+          REDBUS_COOKIE: ${{ secrets.REDBUS_COOKIE }}
+        run: python redbus_scraper.py
