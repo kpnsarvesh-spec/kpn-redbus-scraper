@@ -62,6 +62,9 @@ def fetch_page(page_num: int, start_date: int, end_date: int, get_count: bool = 
             return json.loads(r.read())
     except urllib.error.HTTPError as e:
         err = e.read().decode()
+        if e.code in (401, 403):
+            print(f"  AUTH ERROR ({e.code}) — REDBUS_COOKIE has expired. Update the GitHub secret.")
+            sys.exit(2)
         print(f"  HTTP {e.code} on page {page_num}: {err[:200]}")
         return {}
     except Exception as e:
@@ -78,6 +81,11 @@ def scrape_all(start_date: int = 20230101) -> list:
     if not data:
         print("  Failed to fetch first page")
         return []
+
+    # Detect auth failure via empty/unexpected response
+    if "count" not in data and "report" not in data:
+        print(f"  AUTH ERROR — unexpected response (cookie likely expired): {str(data)[:200]}")
+        sys.exit(2)
 
     total = data.get("count", 0)
     report = data.get("report", [])
@@ -132,6 +140,10 @@ def post_to_vps(ratings: list) -> dict:
 def main():
     print("=== RedBus Ratings Scraper ===")
     print(f"Cookie present: {'yes (' + str(len(REDBUS_COOKIE)) + ' chars)' if REDBUS_COOKIE else 'NO - will likely get 401/403'}")
+
+    if not REDBUS_COOKIE:
+        print("REDBUS_COOKIE secret is not set — update it in GitHub repo secrets.")
+        sys.exit(2)
 
     raw = scrape_all(start_date=20230101)
     print(f"\nTotal scraped: {len(raw)}")
